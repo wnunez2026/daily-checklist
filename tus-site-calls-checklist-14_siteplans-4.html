@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Daily Checklist</title>
+  <style>
+    :root{
+      --bg:#f3f7fb;
+      --card:#ffffff;
+      --border:#e6edf5;
+      --text:#0f172a;
+      --muted:#64748b;
+      --green:#0a8f61;
+      --green-2:#0aa06f;
+      --chip:#eef2ff;
+      --chipText:#1e3a8a;
+      --danger:#ef4444;
+      --shadow:0 6px 18px rgba(15, 23, 42, 0.06);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding:24px;
+    }
+    .wrap{max-width:980px;margin:0 auto}
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px 18px 16px;
+      margin-bottom:16px;
+    }
+    .headerRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    h1{
+      font-size:22px;
+      line-height:1.1;
+      margin:0 0 4px;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .btnRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    button{
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:600;
+      font-size:13px;
+      cursor:pointer;
+    }
+    button:hover{filter:brightness(0.98)}
+    .btnDanger{
+      border-color:#fecaca;
+      background:#fff5f5;
+      color:#991b1b;
+    }
+    .btnSuccess{
+      border-color:#bbf7d0;
+      background:#f0fdf4;
+      color:#065f46;
+    }
+    .overallRow{
+      margin-top:14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .label{font-size:13px;color:var(--muted)}
+    .pill{
+      font-size:13px;
+      background:var(--chip);
+      color:var(--chipText);
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid #dbeafe;
+      font-weight:700;
+      min-width:56px;
+      text-align:center;
+    }
+    .progressTrack{
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:#e8eef6;
+      overflow:hidden;
+      margin-top:8px;
+    }
+    .progressBar{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, var(--green), var(--green-2));
+    }
+
+    /* Section cards */
+    .sectionTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .sectionTitle{
+      font-size:16px;
+      margin:0;
+      font-weight:800;
+    }
+    .circles{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      padding:6px 0 10px;
+    }
+    .circle{
+      width:42px;height:42px;
+      border-radius:999px;
+      border:2px solid #d5deea;
+      background:#fff;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      user-select:none;
+      transition:transform .05s ease, border-color .15s ease, background .15s ease;
+      position:relative;
+    }
+    .circle:active{transform:scale(0.98)}
+    .circle .dot{
+      width:7px;height:7px;border-radius:999px;background:#b8c4d6;
+      opacity:.9;
+    }
+    .circle.checked{
+      border-color:rgba(10,143,97,.3);
+      background:var(--green);
+    }
+    .circle.checked .dot{display:none}
+    .circle.checked::after{
+      content:"✓";
+      color:#fff;
+      font-size:22px;
+      font-weight:900;
+      line-height:1;
+    }
+    .sectionActions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:2px;
+    }
+
+    .tip{
+      font-size:12px;
+      color:var(--muted);
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header / Overall -->
+  <div class="card">
+    <div class="headerRow">
+      <div>
+        <h1>Daily Checklist</h1>
+        <p class="sub">Click circles to check off. Progress saves in your browser (localStorage).</p>
+      </div>
+      <div class="btnRow">
+        <button id="copyBtn">Copy status</button>
+        <button id="resetAllBtn" class="btnDanger">Reset all</button>
+      </div>
+    </div>
+
+    <div class="overallRow">
+      <div class="label">Overall</div>
+      <div class="pill" id="overallPill">0/0</div>
+    </div>
+    <div class="progressTrack" aria-label="Overall progress">
+      <div class="progressBar" id="overallBar"></div>
+    </div>
+  </div>
+
+  <!-- Sections will render here -->
+  <div id="sections"></div>
+
+  <div class="tip">
+    Tip: Teams chat can’t run interactive checkboxes directly. If you share this HTML from OneDrive/SharePoint, JavaScript may be blocked for others.
+  </div>
+
+</div>
+
+<script>
+  // ====== CONFIG ======
+  // Site Plans updated from 6 -> 4.
+  const SECTIONS = [
+    { id: "tus",       title: "TUS",        count: 14, pillColor: "chip" },
+    { id: "siteplans", title: "Site Plans", count: 4,  pillColor: "success" },
+    { id: "calls",     title: "Calls",      count: 3,  pillColor: "success" },
+  ];
+
+  const LS_PREFIX = "dailyChecklist.v1.";
+
+  // ====== HELPERS ======
+  const qs = (sel, el=document) => el.querySelector(sel);
+
+  function keyFor(sectionId){ return LS_PREFIX + sectionId; }
+
+  function loadState(sectionId, count){
+    const raw = localStorage.getItem(keyFor(sectionId));
+    if(!raw) return Array(count).fill(false);
+    try{
+      const arr = JSON.parse(raw);
+      // normalize length
+      const out = Array(count).fill(false);
+      for(let i=0;i<Math.min(count, arr.length);i++) out[i] = !!arr[i];
+      return out;
+    } catch {
+      return Array(count).fill(false);
+    }
+  }
+
+  function saveState(sectionId, state){
+    localStorage.setItem(keyFor(sectionId), JSON.stringify(state));
+  }
+
+  function countsForAll(){
+    let done=0, total=0;
+    for(const s of SECTIONS){
+      const st = loadState(s.id, s.count);
+      done += st.filter(Boolean).length;
+      total += s.count;
+    }
+    return {done, total};
+  }
+
+  function updateOverallUI(){
+    const {done, total} = countsForAll();
+    qs("#overallPill").textContent = `${done}/${total}`;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    qs("#overallBar").style.width = pct + "%";
+  }
+
+  function sectionDoneCount(sectionId, count){
+    const st = loadState(sectionId, count);
+    return st.filter(Boolean).length;
+  }
+
+  function render(){
+    const host = qs("#sections");
+    host.innerHTML = "";
+
+    for(const s of SECTIONS){
+      const state = loadState(s.id, s.count);
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.dataset.section = s.id;
+
+      const top = document.createElement("div");
+      top.className = "sectionTop";
+
+      const h = document.createElement("h2");
+      h.className = "sectionTitle";
+      h.textContent = s.title;
+
+      const pill = document.createElement("div");
+      pill.className = "pill";
+      pill.id = `pill-${s.id}`;
+      pill.textContent = `${state.filter(Boolean).length}/${s.count}`;
+      if(s.pillColor === "success"){
+        pill.style.background = "#ecfdf5";
+        pill.style.borderColor = "#bbf7d0";
+        pill.style.color = "#065f46";
+      }
+
+      top.appendChild(h);
+      top.appendChild(pill);
+
+      const circles = document.createElement("div");
+      circles.className = "circles";
+
+      for(let i=0;i<s.count;i++){
+        const c = document.createElement("div");
+        c.className = "circle" + (state[i] ? " checked" : "");
+        c.setAttribute("role","checkbox");
+        c.setAttribute("aria-checked", state[i] ? "true" : "false");
+        c.title = `Toggle ${s.title} #${i+1}`;
+
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        c.appendChild(dot);
+
+        c.addEventListener("click", () => {
+          const st = loadState(s.id, s.count);
+          st[i] = !st[i];
+          saveState(s.id, st);
+          // update UI
+          c.classList.toggle("checked", st[i]);
+          c.setAttribute("aria-checked", st[i] ? "true" : "false");
+          qs(`#pill-${s.id}`).textContent = `${st.filter(Boolean).length}/${s.count}`;
+          updateOverallUI();
+        });
+
+        circles.appendChild(c);
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "sectionActions";
+
+      const resetBtn = document.createElement("button");
+      resetBtn.textContent = "Reset";
+      resetBtn.addEventListener("click", () => {
+        const st = Array(s.count).fill(false);
+        saveState(s.id, st);
+        render();
+        updateOverallUI();
+      });
+
+      const fillBtn = document.createElement("button");
+      fillBtn.textContent = "Fill";
+      fillBtn.className = "btnSuccess";
+      fillBtn.addEventListener("click", () => {
+        const st = Array(s.count).fill(true);
+        saveState(s.id, st);
+        render();
+        updateOverallUI();
+      });
+
+      actions.appendChild(resetBtn);
+      actions.appendChild(fillBtn);
+
+      card.appendChild(top);
+      card.appendChild(circles);
+      card.appendChild(actions);
+
+      host.appendChild(card);
+    }
+
+    updateOverallUI();
+  }
+
+  // ====== GLOBAL BUTTONS ======
+  qs("#resetAllBtn").addEventListener("click", () => {
+    for(const s of SECTIONS){
+      localStorage.removeItem(keyFor(s.id));
+    }
+    render();
+    updateOverallUI();
+  });
+
+  qs("#copyBtn").addEventListener("click", async () => {
+    const {done, total} = countsForAll();
+    const lines = [];
+    lines.push(`Daily Checklist: ${done}/${total}`);
+    for(const s of SECTIONS){
+      const d = sectionDoneCount(s.id, s.count);
+      lines.push(`${s.title}: ${d}/${s.count}`);
+    }
+    const text = lines.join("\n");
+    try{
+      await navigator.clipboard.writeText(text);
+      qs("#copyBtn").textContent = "Copied!";
+      setTimeout(() => qs("#copyBtn").textContent = "Copy status", 900);
+    } catch {
+      window.prompt("Copy status:", text);
+    }
+  });
+
+  // Initial render
+  render();
+</script>
+</body>
+</html>
